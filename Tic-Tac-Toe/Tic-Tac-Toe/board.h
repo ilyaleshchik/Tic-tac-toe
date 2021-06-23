@@ -21,7 +21,7 @@ private:
 	}
 	bool bCheckWinner() {
 		bool ok = 0;
-		for (int i = 0; i < 9; i+=3) {
+		for (int i = 0; i < 9; i += 3) {
 			ok |= bCheckTriple(i, i + 1, i + 2);
 		}
 		for (int i = 0; i < 3; i++) {
@@ -31,10 +31,18 @@ private:
 		ok |= bCheckTriple(2, 4, 6);
 		return ok;
 	}
+	bool bCheckTie() {
+		bool ok = 1;
+		for (int i = 0; i < 9; i++) {
+			if (cField[pTo[i].first][pTo[i].second] != 'X' && cField[pTo[i].first][pTo[i].second] != 'O')
+				ok = 0;
+		}
+		return ok;
+	}
 
 public:
 	//SOME STUF
-	bool bIsFinished = 0;
+	int nIsFinished = 0;
 	board() {
 		for (int i = 0; i < 5; i++) {
 			for (int j = 0; j < 5; j++) {
@@ -58,20 +66,24 @@ public:
 		pTo[6] = { 4, 0 };
 		pTo[7] = { 4, 2 };
 		pTo[8] = { 4, 4 };
+		for (int i = 0; i < 9; i++) {
+			cField[pTo[i].first][pTo[i].second] = i + 1 + '0';
+		}
 		cPlayers[0] = 'X';
 		cPlayers[1] = 'O';
 	}
 	bool CheckMove(int nPlayerMove) {
 		pair<int, int> pCur = pTo[nPlayerMove];
-		if (cField[pCur.first][pCur.second] != '.') return 0;
+		if (cField[pCur.first][pCur.second] == 'X' || cField[pCur.first][pCur.second] == 'O') return 0;
 		return 1;
 	}
 	void Set(int nPlayerMove, int curPlayer) {
 		pair<int, int> pCur = pTo[nPlayerMove];
 		cField[pCur.first][pCur.second] = cPlayers[curPlayer];
 		if (bCheckWinner()) {
-			bIsFinished = 1;
+			nIsFinished = 1;
 		}
+		else if (bCheckTie()) nIsFinished = 2;
 	}	
 	void print() {
 		system("cls");

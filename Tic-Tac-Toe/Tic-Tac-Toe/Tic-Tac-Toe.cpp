@@ -17,7 +17,7 @@ int main()
 	cin >> names[1];
 	int curPlayer = 0;
 
-	while (!Table.bIsFinished) {
+	while (!Table.nIsFinished) {
 		Table.print();
 		cout << "Player " << names[curPlayer] << " make a move: ";
 		int nMove;
@@ -33,7 +33,9 @@ int main()
 		}
 	}
 	Table.print();
-	cout << "Player " << names[curPlayer ^ 1] << " wins!!!\n";
+	if(Table.nIsFinished == 1)
+		cout << "Player " << names[curPlayer ^ 1] << " wins!!!\n";
+	else cout << "Tie!!!\n";
 	system("pause");
 	return 0;
 }
