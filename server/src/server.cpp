@@ -1,4 +1,5 @@
 #include "server.h"
+#include "../../Tic-Tac-Toe/src/board.h"
 #include <cassert>
 #include <string>
 
@@ -121,8 +122,6 @@ bool server::startServer() {
 			close(newfd);
 			continue;
 		}
-		std::cerr << "[NAME]: " << msg << '\n';
-		std::cerr << "[SOCKFD]: " << newfd << '\n';
 		pSocks.push_back(std::move(newfd));
 		pNames.push_back(msg);
 	}
@@ -163,13 +162,65 @@ void server::gameLoop() {
 		return;
 	}
 	std::string msg;
-	if(curPlayer == 0) {
+	board table;
+	int curSign = 0;
+	while(!table.nIsFinished) {
 		while(recvFrom(pSocks[curPlayer], msg) <= 0);
-	}else {
-		while(recvFrom(pSocks[curPlayer ^ 1], msg) <= 0);
+		std::cerr << "[MOVE]: " << pNames[curPlayer] << " - " << msg << '\n';
+		int curMove = stoi(msg);
+		curMove--;
+		if(table.CheckMove(curMove)) {
+			if(sendTo(pSocks[curPlayer], "OK")) {
+				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
+				///send other player win message
+				close(pSocks[curPlayer]);
+				return; 
+			}
+			table.Set(curMove, curSign);
+		}else {
+			if(sendTo(pSocks[curPlayer], "WR")) {
+				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
+				///send other player win message
+				close(pSocks[curPlayer]);
+				return; 
+			}
+			continue;
+		}
+		if(sendTo(pSocks[curPlayer ^ 1], msg)) {
+			std::cerr << "[DISC]: Player " << pNames[curPlayer ^ 1] << " has disconeccted!\n";
+			///send other player win message
+			close(pSocks[curPlayer ^ 1]);
+			return; 
+		}
+		curPlayer ^=  1;
+		curSign ^= 1;
 	}
-	std::cerr << "[MOVE]:" << msg << '\n';
+	if(table.nIsFinished == 1) {
+		if(sendTo(pSocks[curPlayer ^ 1], "WIN")) {
+			std::cerr << "[ERROR]: send win\n";
+			///send other player win message
+			close(pSocks[curPlayer ^ 1]); 
+		}
+		if(sendTo(pSocks[curPlayer], "LOSE")) {
+			std::cerr << "[ERROR]: send lose\n"; 
+			///send other player win message
+			close(pSocks[curPlayer]);
+		}
+	}else {
 
+		if(sendTo(pSocks[curPlayer ^ 1], "TIE")) {
+			std::cerr << "[ERROR]: send tie\n";
+			///send other player win message
+			close(pSocks[curPlayer ^ 1]); 
+		}
+		if(sendTo(pSocks[curPlayer], "TIE")) {
+			std::cerr << "[ERROR]: send tie\n"; 
+			///send other player win message
+			close(pSocks[curPlayer]);
+		}
+	}
+
+	return;
 }
 
  

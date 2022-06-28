@@ -1,4 +1,5 @@
 #include "client.h"
+#include "../../Tic-Tac-Toe/src/board.h"
 
 int main(int argc, char *argv[]) {
 
@@ -41,14 +42,47 @@ int main(int argc, char *argv[]) {
     }
 
     int curPlayer = stoi(msg);
-    std::cerr << "[PLAYER]: " << curPlayer << '\n';
-
-    if(curPlayer) {
-        std::cin >> msg;
-        if(cl->sendMessage(msg)) {
-            std::cerr << "[ERROR]: sendMessage()\n";
-            return 1;
+    board table;
+    int curSign = 0;
+    while(!table.nIsFinished) {
+        table.print();
+        if(curPlayer) {
+            std::cout << "Enter your move: ";
+            int mv;
+            std::cin >> mv;
+            msg = to_string(mv);
+            if(cl->sendMessage(msg)) {
+                std::cerr << "[ERROR]: send move\n";
+                return 1;
+            }
+            mv--;
+            if(cl->recvMessage(msg)) {
+                std::cerr << "[ERROR]: recv msg\n";
+                return 1;
+            }
+            if(msg == "OK") {
+                assert(table.CheckMove(mv));
+                table.Set(mv, curSign);
+            }else {
+                std::cout << "Incorrect move!!! Re enter your move pleas!!!";
+                system("pause");
+                continue;
+            }
+        }else {
+            std::cout << "Wait while your oponent makes move...\n";
+            while(cl->recvMessage(msg));
+            int mv = stoi(msg);
+            assert(table.CheckMove(mv - 1));
+            table.Set(mv - 1, curSign); 
         }
+        curPlayer ^= 1;
+        curSign ^= 1;
     }
+
+    if(cl->recvMessage(msg)) {
+        std::cerr << "[ERROR]: results\n";
+        return 1;
+    }
+    std::cout << msg << '\n';
     return 0;
 }
