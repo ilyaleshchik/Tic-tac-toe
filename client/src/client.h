@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <stdlib.h>
+#include "../../Tic-Tac-Toe/src/board.h"
 
 //Windows includes
 #ifdef _WIN32
@@ -49,5 +50,6 @@ public:
     bool connectServer();
     bool recvMessage(std::string &msg);//reciev text message
     bool sendMessage(std::string &msg);
+    void gameLoop(std::string &pName);
     ~client();
 };

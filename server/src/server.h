@@ -31,35 +31,29 @@ private:
 	WSAData wsa;
 	char yes = '1';
 #endif
-	struct addrinfo hints, *serverinfo;
-	struct sockaddr_in *ipAddr;
-	int newfd1 = -1, newfd2 = -1;
-	int addrLen, sockfd, inet_type, sock_type, sock_protocol, backLog;
 #ifdef __unix__
 	struct sigaction sa;
 	int yes = 1;
 	void static sigchld_handler(int s);
 #endif
-
+	struct addrinfo hints, *serverinfo;
+	struct sockaddr_in *ipAddr;
+	int addrLen, sockfd, inet_type, sock_type, sock_protocol, backLog;
 	struct sockaddr_storage theirAddr;
 	std::string ip, port;
 	bool sendTo(int &ockto, std::string msg);
 	int recvFrom(int &sockFrom, std::string& msg);
 	void *get_in_addr(struct sockaddr *sa);
-	std::vector<std::string> pNames;
-	std::vector<int> pSocks;
+	std::vector<std::string> pNames;//players' nicks
+	std::vector<int> pSocks;//players' socketfile descriptors
 	
 public:
 	server(std::string _port, int _backLog);
-	//server(std::string _port, int _inet_type, int _sock_type, int _sock_protocol, std::string _ip, int _backLog);
 #ifdef _WIN32
 	bool initWSA();
 #endif
 	bool bindDefault();
-	//bool bindSocket();
 	bool startServer();
 	void gameLoop();
-
 	~server();
-
 };

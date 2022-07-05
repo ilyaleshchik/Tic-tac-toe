@@ -103,9 +103,9 @@ bool server::startServer() {
 
 	std::cerr << "[SERVER]: waiting for connections...\n";
 
-	while(pSocks.size() != 2) {
+	while(pSocks.size() != 2) {///wait while two players connected
 		socklen_t addr_size = sizeof theirAddr;
-		int newfd = accept(sockfd, (struct sockaddr *)&theirAddr, &addr_size);
+		int newfd = accept(sockfd, (struct sockaddr *)&theirAddr, &addr_size);//accept new connection
 		if(newfd < 0) {
 			std::cerr << "[ERROR]: accept()\n";
 			continue;
@@ -114,10 +114,7 @@ bool server::startServer() {
 		inet_ntop(theirAddr.ss_family, get_in_addr((struct sockaddr *)&theirAddr), curIp, sizeof curIp);
 		std::cerr << "[CONNECTION]: " << curIp << '\n';
 		std::string msg;
-		if(newfd1 == -1)
-			newfd1 = newfd;
-		else newfd2 = newfd;
-		if(recvFrom(newfd, msg) <= 0) {
+		if(recvFrom(newfd, msg) <= 0) {//get new player's name
 			std::cerr << "[ERROR]: recvFrom()";
 			close(newfd);
 			continue;
@@ -125,8 +122,6 @@ bool server::startServer() {
 		pSocks.push_back(std::move(newfd));
 		pNames.push_back(msg);
 	}
-
-
 	return 0;
 }
 
@@ -149,6 +144,7 @@ void server::gameLoop() {
 	std::srand(time(NULL));
 	int curPlayer = std::rand() % 2;
 
+//---------send players which turn now-------
 	if(sendTo(pSocks[curPlayer], "1")) {
 		std::cerr << "[DISCONNECT]: Payer " << pNames[curPlayer] << " has disconnected\n";
 		close(pSocks[curPlayer]);
@@ -161,15 +157,17 @@ void server::gameLoop() {
 		//send second player win message
 		return;
 	}
+
+
 	std::string msg;
 	board table;
 	int curSign = 0;
-	while(!table.nIsFinished) {
-		while(recvFrom(pSocks[curPlayer], msg) <= 0);
+	while(!table.nIsFinished) {//while game won't end or someone will win
+		while(recvFrom(pSocks[curPlayer], msg) <= 0); //recv message from current player
 		std::cerr << "[MOVE]: " << pNames[curPlayer] << " - " << msg << '\n';
 		int curMove = stoi(msg);
 		curMove--;
-		if(table.CheckMove(curMove)) {
+		if(table.CheckMove(curMove)) { //cheching current move
 			if(sendTo(pSocks[curPlayer], "OK")) {
 				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
 				///send other player win message
@@ -177,7 +175,7 @@ void server::gameLoop() {
 				return; 
 			}
 			table.Set(curMove, curSign);
-		}else {
+		}else { //if it's wrong send current player [WRONG] message
 			if(sendTo(pSocks[curPlayer], "WR")) {
 				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
 				///send other player win message
@@ -186,46 +184,45 @@ void server::gameLoop() {
 			}
 			continue;
 		}
-		if(sendTo(pSocks[curPlayer ^ 1], msg)) {
+		sleep(0.1);
+		if(sendTo(pSocks[curPlayer ^ 1], msg)) { //send other player current move
 			std::cerr << "[DISC]: Player " << pNames[curPlayer ^ 1] << " has disconeccted!\n";
 			///send other player win message
 			close(pSocks[curPlayer ^ 1]);
 			return; 
 		}
+
+		//switch players
 		curPlayer ^=  1;
 		curSign ^= 1;
 	}
-	if(table.nIsFinished == 1) {
-		if(sendTo(pSocks[curPlayer ^ 1], "WIN")) {
-			std::cerr << "[ERROR]: send win\n";
-			///send other player win message
-			close(pSocks[curPlayer ^ 1]); 
-		}
-		if(sendTo(pSocks[curPlayer], "LOSE")) {
-			std::cerr << "[ERROR]: send lose\n"; 
-			///send other player win message
-			close(pSocks[curPlayer]);
-		}
-	}else {
 
-		if(sendTo(pSocks[curPlayer ^ 1], "TIE")) {
-			std::cerr << "[ERROR]: send tie\n";
-			///send other player win message
-			close(pSocks[curPlayer ^ 1]); 
-		}
-		if(sendTo(pSocks[curPlayer], "TIE")) {
-			std::cerr << "[ERROR]: send tie\n"; 
-			///send other player win message
-			close(pSocks[curPlayer]);
-		}
+	std::string res1 = "TIE", res2 = "TIE";
+	if(table.nIsFinished == 1) {
+		res1 = "WIN";
+		res2 = "LOSE";
+
 	}
 
+//----------sedning results------------------
+	if(sendTo(pSocks[curPlayer ^ 1], res1)) {
+		std::cerr << "[ERROR]: send res1\n";
+		close(pSocks[curPlayer ^ 1]); 
+	}
+	sleep(0.1);
+	if(sendTo(pSocks[curPlayer], res2)) {
+		std::cerr << "[ERROR]: send res2\n"; 
+		close(pSocks[curPlayer]);
+	}
 	return;
 }
 
  
 server::~server() {
 	delete serverinfo;
+	for(int &i: pSocks) {
+		close(i);
+	}
 #ifdef _WIN32
 	WSACleanup();
 #endif

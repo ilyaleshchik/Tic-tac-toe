@@ -82,7 +82,7 @@ bool client::recvMessage(std::string &msg) {
 
     char buf[100];
     int numBytes = recv(sockfd, buf, 99, 0);
-    if(numBytes == -1) {
+    if(numBytes == -1 || numBytes == 0) {
         return 1;
     }
     buf[numBytes] = '\0';
@@ -99,6 +99,65 @@ bool client::sendMessage(std::string &msg) {
     return 0;
 }
 
+void client::gameLoop(std::string &pName) {
+
+    if(sendMessage(pName)) {
+        std::cerr << "[ERROR]: send name\n";
+        return; 
+    }
+
+    std::string msg;
+    if(recvMessage(msg)) {
+        std::cerr << "[ERROR]: get cur player\n";
+        return;
+    }
+
+    int curPlayer = stoi(msg);
+    board table;
+    int curSign = 0;
+    while(!table.nIsFinished) {
+        table.print();
+        if(curPlayer) {
+            std::cout << "Enter your move: ";
+            int mv;
+            std::cin >> mv;
+            msg = to_string(mv);
+            if(sendMessage(msg)) {
+                std::cerr << "[ERROR]: send move\n";
+                return;
+            }
+            mv--;
+            if(recvMessage(msg)) {
+                std::cerr << "[ERROR]: recv msg\n";
+                return;
+            }
+            std::cerr << "MSG: " << msg << '\n';
+            if(msg == "OK") {
+                assert(table.CheckMove(mv));
+                table.Set(mv, curSign);
+            }else {
+                std::cout << "Incorrect move!!! Re enter your move pleas!!!\n";
+                system("pause");
+                continue;
+            }
+        }else {
+            std::cout << "Wait while your oponent makes move...\n";
+            while(recvMessage(msg));
+            int mv = stoi(msg);
+            assert(table.CheckMove(mv - 1));
+            table.Set(mv - 1, curSign); 
+        }
+        curPlayer ^= 1;
+        curSign ^= 1;
+    }
+    table.print();
+    if(recvMessage(msg)) {
+        std::cerr << "[ERROR:] recv results!\n";
+        return;
+    }
+    std::cout << msg << '\n';
+    return;
+}
 
 
 

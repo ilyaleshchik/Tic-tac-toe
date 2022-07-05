@@ -2,7 +2,11 @@
 using namespace std;
 #pragma once
 
-
+#ifdef _WIN32
+#define CLEAR "cls"
+#else
+#define CLEAR "clear"
+#endif
 
 class board
 {
@@ -86,7 +90,7 @@ public:
 		else if (bCheckTie()) nIsFinished = 2;
 	}	
 	void print() {
-		system("cls");
+		system(CLEAR);
 		for (int i = 0; i < 5; i++) {
 			for (int j = 0; j < 5; j++) {
 				cout << cField[i][j];
