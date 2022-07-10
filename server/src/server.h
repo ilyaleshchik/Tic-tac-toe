@@ -6,10 +6,12 @@
 #include <vector>
 #include <errno.h>
 #include <fcntl.h>
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+#define close(v) closesocket((v))
 #endif
 
 #ifdef __unix__
@@ -23,6 +25,7 @@
 #include <unistd.h>
 #include <ifaddrs.h>
 #endif
+
 class server
 {
 
@@ -42,6 +45,7 @@ private:
 	struct sockaddr_storage theirAddr;
 	std::string ip, port;
 	bool sendTo(int &ockto, std::string msg);
+	void discPlayer(int curPlayer);
 	int recvFrom(int &sockFrom, std::string& msg);
 	void *get_in_addr(struct sockaddr *sa);
 	std::vector<std::string> pNames;//players' nicks

@@ -13,6 +13,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+#define close(v) closesocket((v))
 #endif
 
 //Linux and maxOS includes
@@ -40,6 +41,8 @@ private:
     int sockfd;
     std::string ip, port;
     void *getInAddr(struct sockaddr *sa);
+    board table;
+    bool handleMessage(std::string& msg, int mv, int curPlayer, int curSign);//move was incorrect returns 1
     bool initSocket();//init socket descriptor
 
 public:

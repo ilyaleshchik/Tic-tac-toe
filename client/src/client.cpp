@@ -39,11 +39,7 @@ bool client::initSocket() {
             continue;
         }
         if(connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-#ifdef _WIN32
-			closesocket(sockfd);
-#else
-			close(sockfd);
-#endif
+            close(sockfd);
             perror("connect");
             continue;
         }
@@ -99,6 +95,22 @@ bool client::sendMessage(std::string &msg) {
     return 0;
 }
 
+bool client::handleMessage(std::string &msg, int mv, int curPlayer, int curSign) {
+
+    if(msg == "WR")
+        return 1;
+    if(msg == "TIMEOUT") {
+        std::cout << "YOU LOST BECAUSE OF TIMEOUT\n";
+        exit(0);
+    }
+    if(msg == "OK") {
+        assert(table.CheckMove(mv));
+        table.Set(mv, curSign);
+        return 0;
+    }
+    return 0;
+}
+
 void client::gameLoop(std::string &pName) {
 
     if(sendMessage(pName)) {
@@ -113,7 +125,6 @@ void client::gameLoop(std::string &pName) {
     }
 
     int curPlayer = stoi(msg);
-    board table;
     int curSign = 0;
     while(!table.nIsFinished) {
         table.print();
@@ -131,18 +142,23 @@ void client::gameLoop(std::string &pName) {
                 std::cerr << "[ERROR]: recv msg\n";
                 return;
             }
-            std::cerr << "MSG: " << msg << '\n';
-            if(msg == "OK") {
-                assert(table.CheckMove(mv));
-                table.Set(mv, curSign);
-            }else {
+            if(handleMessage(msg, mv, curPlayer, curSign)) {
                 std::cout << "Incorrect move!!! Re enter your move pleas!!!\n";
                 system("pause");
                 continue;
             }
         }else {
             std::cout << "Wait while your oponent makes move...\n";
-            while(recvMessage(msg));
+            if(recvMessage(msg)){
+                std::cerr << "[ERROR]: recv move\n";
+                return; 
+            }
+            if(msg == "YOU WIN") {
+                table.nIsFinished = 1;
+                table.print();
+                std::cout << "YOU WIN\nOponent has dicsonnected\n";
+                return;
+            }
             int mv = stoi(msg);
             assert(table.CheckMove(mv - 1));
             table.Set(mv - 1, curSign); 

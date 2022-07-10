@@ -9,13 +9,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Enter player name: ";
     std::cin >> pName;
 
+    std::string ip = "127.0.0.1", port = "1337";
 
-    std::string ip, port;
-
-    if(argc != 3) {
-        ip = "127.0.0.1";
-        port = "1337";
-    }else {
+    if(argc == 3) {
         ip = argv[1];
         port = argv[2];
     }
@@ -28,8 +24,7 @@ int main(int argc, char *argv[]) {
 
     int ret = cl->connectServer();
 
-
-    if(ret != 0) 
+    if(ret != 0)
         return 1;
 
     cl->gameLoop(pName);

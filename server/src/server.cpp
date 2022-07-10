@@ -57,17 +57,16 @@ bool server::bindDefault() {
 			perror("server: socket");
 			continue;
 		}
-		if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+		struct timeval timeout;
+		timeout.tv_sec = 5;
+		timeout.tv_usec = 0;
+		if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
 			perror("setsockopt");
 			freeaddrinfo(serverinfo);
 			return 0;
 		}
 		if(bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-#ifdef __unix__
 			close(sockfd);
-#else
-			closesocket(sockfd);
-#endif
 			perror("server: bind");
 			continue;
 		}
@@ -132,12 +131,19 @@ int server::recvFrom(int &sockFrom, std::string& msg) {
 	if(numbytes == -1) {
 		return -1;
 	}
-
 	buf[numbytes] = '\0';
 	msg = buf;
 	return numbytes;
 }
 
+void server::discPlayer(int curPlayer) {
+	std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
+	///send other player win message
+	sendTo(pSocks[curPlayer], "TIMEOUT");
+	close(pSocks[curPlayer]);
+	sendTo(pSocks[curPlayer ^ 1], "YOU WIN");
+	return;
+}
 
 void server::gameLoop() {
 
@@ -146,15 +152,11 @@ void server::gameLoop() {
 
 //---------send players which turn now-------
 	if(sendTo(pSocks[curPlayer], "1")) {
-		std::cerr << "[DISCONNECT]: Payer " << pNames[curPlayer] << " has disconnected\n";
-		close(pSocks[curPlayer]);
-		//send second player win message
+		discPlayer(curPlayer);
 		return;
 	}
 	if(sendTo(pSocks[curPlayer ^ 1], "0")) {
-		std::cerr << "[DISCONNECT]: Payer " << pNames[curPlayer ^ 1] << " has disconnected\n";
-		close(pSocks[curPlayer ^ 1]);
-		//send second player win message
+		discPlayer(curPlayer ^ 1);
 		return;
 	}
 
@@ -162,33 +164,32 @@ void server::gameLoop() {
 	std::string msg;
 	board table;
 	int curSign = 0;
+
 	while(!table.nIsFinished) {//while game won't end or someone will win
-		while(recvFrom(pSocks[curPlayer], msg) <= 0); //recv message from current player
+
+		if(recvFrom(pSocks[curPlayer], msg) <= 0) {
+			discPlayer(curPlayer);
+			return;
+		}
 		std::cerr << "[MOVE]: " << pNames[curPlayer] << " - " << msg << '\n';
 		int curMove = stoi(msg);
 		curMove--;
 		if(table.CheckMove(curMove)) { //cheching current move
 			if(sendTo(pSocks[curPlayer], "OK")) {
-				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
-				///send other player win message
-				close(pSocks[curPlayer]);
+				discPlayer(curPlayer);
 				return; 
 			}
 			table.Set(curMove, curSign);
 		}else { //if it's wrong send current player [WRONG] message
 			if(sendTo(pSocks[curPlayer], "WR")) {
-				std::cerr << "[DISC]: Player " << pNames[curPlayer] << " has disconeccted!\n";
-				///send other player win message
-				close(pSocks[curPlayer]);
+				discPlayer(curPlayer);
 				return; 
 			}
 			continue;
 		}
 		sleep(0.1);
 		if(sendTo(pSocks[curPlayer ^ 1], msg)) { //send other player current move
-			std::cerr << "[DISC]: Player " << pNames[curPlayer ^ 1] << " has disconeccted!\n";
-			///send other player win message
-			close(pSocks[curPlayer ^ 1]);
+			discPlayer(curPlayer ^ 1);
 			return; 
 		}
 
@@ -201,7 +202,6 @@ void server::gameLoop() {
 	if(table.nIsFinished == 1) {
 		res1 = "WIN";
 		res2 = "LOSE";
-
 	}
 
 //----------sedning results------------------
